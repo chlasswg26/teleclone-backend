@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Schema Client Generator
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Schema Generator DBML
+
+generator dbml {
+  provider = "prisma-dbml-generator"
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  email String @unique @db.VarChar(50)
+  password String? @unique
+  profile Profile?
+  contacts Contact[] @relation("ContactUser")
+  contact Contact[] @relation("ContactPerson")
+  senders Chat[] @relation("ChatSender")
+  recipients Chat[] @relation("ChatRecipient")
+
+  @@index([id])
+}
+
+model Profile {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(50)
+  username String @unique @db.VarChar(15)
+  phone String? @db.VarChar(20)
+  bio String? @db.Text
+  avatar String? @db.VarChar(100)
+  status ProfileStatus @default(OFFLINE)
+  userId Int @unique
+  user User @relation(fields: [userId], references: [id])
+  created_at DateTime @default(now())
+  updated_at DateTime? @updatedAt
+
+  @@index([id, userId])
+}
+
+model Contact {
+  id Int @id @default(autoincrement())
+  personId Int
+  person User @relation("ContactPerson", fields: [personId], references: [id])
+  userId Int
+  user User @relation("ContactUser", fields: [userId], references: [id])
+
+  @@index([id, personId, userId])
+}
+
+model Chat {
+  id Int @id @default(autoincrement())
+  content String? @db.Text
+  attachment String? @db.Text
+  attachment_type String?
+  senderId Int
+  sender User @relation("ChatSender", fields: [senderId], references: [id])
+  recipientId Int
+  recipient User? @relation("ChatRecipient", fields: [recipientId], references: [id])
+  created_at DateTime @default(now())
+  
+  @@index([id, senderId, recipientId])
+}
+
+enum ProfileStatus {
+  ONLINE
+  IDLE
+  OFFLINE
+}
