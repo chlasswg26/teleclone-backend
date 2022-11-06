@@ -22,13 +22,13 @@ module.exports = {
 
       req.logIn(user, (err) => {
         if (err) {
-          return response(response, 400, {
+          return response(res, 400, {
             message: err
           })
         }
 
         next()
       })
-    })(req, response, next)
+    })(req, res, next)
   }
 }

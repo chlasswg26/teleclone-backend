@@ -265,7 +265,11 @@ module.exports = {
           accessToken
         }
 
-        return response(res, 200, users)
+        const io = req.app.get('newSocketIo')
+
+        io.sockets.emit('auth:google', users)
+
+        res.send('<script>window.close();</script>')
       } catch (error) {
         return response(res, 500, {
           message: error.message || error

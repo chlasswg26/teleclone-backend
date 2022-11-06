@@ -5,6 +5,7 @@ module.exports = (socket) => {
 
   if (socket.connected) {
     online()
+    socket.join(socket.id)
   }
 
   socket.on('disconnect', (reason) => {

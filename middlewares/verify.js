@@ -11,9 +11,6 @@ module.exports = {
     const main = async () => {
       try {
         const token = req.headers.authorization
-        const signedCookie = req.signedCookies
-
-        if (!signedCookie?.token) { throw new createErrors.Unauthorized('Session unavailable') }
 
         if (typeof token !== 'undefined') {
           const bearer = token.split(' ')
@@ -49,7 +46,7 @@ module.exports = {
 
                 req.userData = user
 
-                return next()
+                next()
               }
             }
           )

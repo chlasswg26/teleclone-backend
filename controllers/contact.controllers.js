@@ -118,12 +118,22 @@ module.exports = (socket) => {
             data: {
               personId: parseInt(contactId),
               userId: user.id
+            },
+            include: {
+              person: {
+                include: {
+                  profile: true
+                }
+              }
             }
           })
 
           if (!createContact) throw new createErrors.Conflict('Failed to add new contact')
 
           socket.emit('contact:add', { type: 'info', message: 'Success to add new contact' })
+          socket
+            .to([user.session_id, createContact.person.session_id])
+            .emit('profile:read')
         } catch (error) {
           socket.emit('contact:add', { type: 'err', message: error.message || 'Server error' })
         }
@@ -164,12 +174,22 @@ module.exports = (socket) => {
           const deleteContact = await prisma.contact.delete({
             where: {
               id: parseInt(contactId)
+            },
+            include: {
+              person: {
+                include: {
+                  profile: true
+                }
+              }
             }
           })
 
           if (!deleteContact) throw new createErrors.Conflict('Failed to remove contact')
 
           socket.emit('contact:delete', { type: 'info', message: 'Success to remove contact' })
+          socket
+            .to([user.session_id, deleteContact.person.session_id])
+            .emit('profile:read')
         } catch (error) {
           socket.emit('contact:delete', { type: 'err', message: error.message || 'Server error' })
         }

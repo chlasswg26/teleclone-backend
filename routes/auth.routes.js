@@ -65,6 +65,11 @@ Route.post(
   .get('/logout', verifyToken, logoutControllers)
   .get(
     '/google',
+    (req, _, next) => {
+      req.session.socketId = req.query.socketId
+
+      next()
+    },
     passport.authenticate('google', {
       scope: ['profile', 'email']
     })

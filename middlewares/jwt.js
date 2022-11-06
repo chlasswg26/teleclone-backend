@@ -27,7 +27,11 @@ module.exports = {
             { algorithms: JWT_ALGORITHM },
             async (err, result) => {
               if (err) {
-                next(new createErrors.PreconditionFailed(err.message || err))
+                if (typeof bearerToken !== 'undefined' && err.message === 'jwt malformed') {
+                  next()
+                } else {
+                  next(new createErrors.PreconditionFailed(err.message || err))
+                }
               } else {
                 const user = await prisma.user.findUnique({
                   where: {
@@ -36,6 +40,7 @@ module.exports = {
                   select: {
                     id: true,
                     email: true,
+                    session_id: true,
                     profile: {
                       select: {
                         username: true

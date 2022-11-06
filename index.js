@@ -14,7 +14,8 @@ const {
   FRONTEND_URL,
   PORT,
   GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET
+  GOOGLE_CLIENT_SECRET,
+  COOKIE_SECRET_KEY
 } = process.env
 const path = require('node:path')
 const { createServer } = require('http')
@@ -28,6 +29,8 @@ const io = new Server(httpServer, {
 })
 
 const routesNavigator = require('./routes/all.routes')
+const prisma = require('./config/prisma')
+const exclude = require('./helpers/excluder')
 
 app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal'])
 app.use(helmet())
@@ -48,9 +51,7 @@ app.use(morgan('dev'))
 
 app.use(
   session({
-    secret: 'cookie_secret',
-    name: 'kaas',
-    proxy: true,
+    secret: COOKIE_SECRET_KEY,
     resave: true,
     saveUninitialized: true
   })
@@ -64,7 +65,7 @@ passport.use(
     {
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: 'http://localhost:8080/api/v1/auth/google/callback'
+      callbackURL: '/api/v1/auth/google/callback'
     },
     (accessToken, refreshToken, profile, done) => {
       process.nextTick(function () {
@@ -89,14 +90,14 @@ passport.use(
 passport.serializeUser((user, done) => {
   if (NODE_ENV === 'development') console.log('serialize:', user)
 
-  done(null, user._json.email)
+  done(null, user)
 })
-passport.deserializeUser(async (email, done) => {
+passport.deserializeUser(async (data, done) => {
   const main = async () => {
     try {
       let user = await prisma.user.findFirst({
         where: {
-          email
+          email: data._json.email
         },
         include: {
           profile: true,
@@ -108,13 +109,22 @@ passport.deserializeUser(async (email, done) => {
                 }
               }
             }
+          },
+          recipients: {
+            include: {
+              recipient: {
+                include: {
+                  profile: true
+                }
+              }
+            }
           }
         }
       })
 
       user = exclude(user, ['password'])
 
-      if (NODE_ENV === 'development') { console.log('success deserialize:', email, 'deserialize data:', user) }
+      if (NODE_ENV === 'development') { console.log('success deserialize:', data._json.email, 'deserialize data:', user) }
 
       done(null, user)
     } catch (error) {
@@ -134,6 +144,8 @@ passport.deserializeUser(async (email, done) => {
   })
 })
 
+app.set('newSocketIo', io)
+
 app.use('/api/v1', routesNavigator)
 
 app.use('*', (req, res) => {
@@ -151,8 +163,6 @@ const profileHandlers = require('./sockets/profile.socket')
 const contactHandlers = require('./sockets/contact.socket')
 const chatHandlers = require('./sockets/chat.socket')
 const onlineOfflineHandlers = require('./sockets/status.socket')
-const prisma = require('./config/prisma')
-const exclude = require('./helpers/excluder')
 
 io.use(verifyToken)
 io.on('connection', (socket) => {

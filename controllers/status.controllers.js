@@ -27,7 +27,12 @@ module.exports = (socket) => {
               id: findProfile.profile.id
             },
             data: {
-              status: 'OFFLINE'
+              status: 'OFFLINE',
+              user: {
+                update: {
+                  session_id: null
+                }
+              }
             }
           })
 
@@ -74,7 +79,14 @@ module.exports = (socket) => {
             where: {
               id: findProfile.profile.id
             },
-            data: { status: 'IDLE' }
+            data: {
+              status: 'IDLE',
+              user: {
+                update: {
+                  session_id: socket.id
+                }
+              }
+            }
           })
 
           socket.emit('misc:info', {
@@ -121,7 +133,12 @@ module.exports = (socket) => {
               id: findProfile.profile.id
             },
             data: {
-              status: 'ONLINE'
+              status: 'ONLINE',
+              user: {
+                update: {
+                  session_id: socket.id
+                }
+              }
             }
           })
 

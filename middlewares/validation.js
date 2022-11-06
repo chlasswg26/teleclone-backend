@@ -11,7 +11,7 @@ const validate = (validations) => {
 
     const errors = validationResult(req)
 
-    if (errors.isEmpty()) return next()
+    if (errors.isEmpty()) next()
 
     return response(res, 400, {
       message: errors.array({ onlyFirstError: true })[0]

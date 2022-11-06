@@ -20,8 +20,9 @@ generator dbml {
 
 model User {
   id Int @id @default(autoincrement())
-  email String @unique @db.VarChar(50)
+  email String @unique
   password String? @unique
+  session_id String?
   profile Profile?
   contacts Contact[] @relation("ContactUser")
   contact Contact[] @relation("ContactPerson")
@@ -33,11 +34,11 @@ model User {
 
 model Profile {
   id Int @id @default(autoincrement())
-  name String @db.VarChar(50)
-  username String @unique @db.VarChar(15)
-  phone String? @db.VarChar(20)
+  name String
+  username String @unique
+  phone String?
   bio String? @db.Text
-  avatar String? @db.VarChar(100)
+  avatar String?
   status ProfileStatus @default(OFFLINE)
   userId Int @unique
   user User @relation(fields: [userId], references: [id])
@@ -66,6 +67,7 @@ model Chat {
   sender User @relation("ChatSender", fields: [senderId], references: [id])
   recipientId Int
   recipient User? @relation("ChatRecipient", fields: [recipientId], references: [id])
+  status ChatStatus @default(AVAILABLE)
   created_at DateTime @default(now())
   
   @@index([id, senderId, recipientId])
@@ -75,4 +77,9 @@ enum ProfileStatus {
   ONLINE
   IDLE
   OFFLINE
+}
+
+enum ChatStatus {
+  AVAILABLE
+  UNAVAILABLE
 }

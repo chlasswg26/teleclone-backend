@@ -36,14 +36,15 @@ module.exports = (socket) => {
           if (findChat.senderId !== user.id) throw new createErrors.BadRequest('Access denied, you have no access to this chat')
 
           const chat = exclude(findChat, [
-            'password',
-            'senderId',
-            'recipientId'
+            'password'
           ])
 
-          socket.emit(`chat:read:${user?.id}`, { type: 'done', data: chat })
+          socket.emit('chat:read', { type: 'done', data: chat })
         } catch (error) {
-          socket.emit(`chat:read:${user?.id}`, { type: 'err', message: error.message || 'Server error' })
+          socket.emit('chat:read', {
+            type: 'err',
+            message: error.message || 'Server error'
+          })
         }
       }
 
@@ -96,9 +97,14 @@ module.exports = (socket) => {
             message.attachment_type = data?.attachment_type
           }
 
-          socket.emit(`chat:send:${data?.id}`, { type: 'info', data: message })
+          socket
+            .to(data?.socketId)
+            .emit('chat:send', { type: 'info', data: message })
         } catch (error) {
-          socket.emit(`chat:send:${data?.id}`, { type: 'err', message: error.message || 'Server error' })
+          socket.emit('chat:send', {
+            type: 'err',
+            message: error.message || 'Server error'
+          })
         }
       }
 
@@ -131,15 +137,22 @@ module.exports = (socket) => {
 
           if (findChat.senderId !== user.id) throw new createErrors.BadRequest('Access denied, you have no access to this chat')
 
-          const deleteChat = await prisma.chat.delete({
-            where: data
+          const deleteChat = await prisma.chat.update({
+            where: data,
+            data: {
+              status: 'UNAVAILABLE'
+            },
+            include: {
+              recipient: true,
+              sender: true
+            }
           })
 
           if (!deleteChat) throw new createErrors.Conflict('Failed to remove chat')
 
-          socket.emit(`chat:delete:${user?.id}`, { type: 'info', message: 'Success to remove chat' })
+          socket.to([deleteChat.sender.session_id, deleteChat.recipient.session_id]).emit('chat:read')
         } catch (error) {
-          socket.emit(`chat:delete:${user?.id}`, { type: 'err', message: error.message || 'Server error' })
+          socket.emit('chat:delete', { type: 'err', message: error.message || 'Server error' })
         }
       }
 
