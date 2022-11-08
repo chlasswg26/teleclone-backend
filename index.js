@@ -144,8 +144,6 @@ passport.deserializeUser(async (data, done) => {
   })
 })
 
-app.set('newSocketIo', io)
-
 app.use('/api/v1', routesNavigator)
 
 app.use('*', (req, res) => {
@@ -156,6 +154,8 @@ app.use('*', (req, res) => {
     code: 401
   })
 })
+
+app.set('newSocketIo', io)
 
 const { verifyToken } = require('./middlewares/jwt')
 

@@ -66,7 +66,7 @@ Route.post(
   .get(
     '/google',
     (req, _, next) => {
-      req.session.socketId = req.query.socketId
+      req.app.set('socketId', req.query.socketId)
 
       next()
     },

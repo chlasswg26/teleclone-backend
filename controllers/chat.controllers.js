@@ -99,7 +99,7 @@ module.exports = (socket) => {
 
           socket
             .to(data?.socketId)
-            .emit('chat:send', { type: 'info', data: message })
+            .emit('chat:send', { type: 'done', data: message })
         } catch (error) {
           socket.emit('chat:send', {
             type: 'err',

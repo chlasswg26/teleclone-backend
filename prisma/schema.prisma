@@ -26,8 +26,11 @@ model User {
   profile Profile?
   contacts Contact[] @relation("ContactUser")
   contact Contact[] @relation("ContactPerson")
-  senders Chat[] @relation("ChatSender")
+  sender Chat[] @relation("ChatSender")
   recipients Chat[] @relation("ChatRecipient")
+  groups Group[] @relation("GroupOwner")
+  participant Conversation[] @relation("ConversationParticipant")
+  member Members[] @relation("GroupUser")
 
   @@index([id])
 }
@@ -41,7 +44,7 @@ model Profile {
   avatar String?
   status ProfileStatus @default(OFFLINE)
   userId Int @unique
-  user User @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
   created_at DateTime @default(now())
   updated_at DateTime? @updatedAt
 
@@ -51,11 +54,34 @@ model Profile {
 model Contact {
   id Int @id @default(autoincrement())
   personId Int
-  person User @relation("ContactPerson", fields: [personId], references: [id])
+  person User? @relation("ContactPerson", fields: [personId], references: [id])
   userId Int
-  user User @relation("ContactUser", fields: [userId], references: [id])
+  user User? @relation("ContactUser", fields: [userId], references: [id])
 
   @@index([id, personId, userId])
+}
+
+model Group {
+  id Int @id @default(autoincrement())
+  name String?
+  description String?
+  thumbnail String?
+  ownerId Int
+  owner User? @relation("GroupOwner", fields: [ownerId], references: [id])
+  conversations Conversation[] @relation("ConversationGroup")
+  members Members[] @relation("GroupMember")
+
+  @@index([id, ownerId])
+}
+
+model Members {
+  id Int @id @default(autoincrement())
+  userId Int
+  user User? @relation("GroupUser", fields: [userId], references: [id])
+  groupId Int
+  group Group? @relation("GroupMember", fields: [groupId], references: [id])
+
+  @@index([id, userId, groupId])
 }
 
 model Chat {
@@ -64,13 +90,27 @@ model Chat {
   attachment String? @db.Text
   attachment_type String?
   senderId Int
-  sender User @relation("ChatSender", fields: [senderId], references: [id])
+  sender User? @relation("ChatSender", fields: [senderId], references: [id])
   recipientId Int
   recipient User? @relation("ChatRecipient", fields: [recipientId], references: [id])
   status ChatStatus @default(AVAILABLE)
   created_at DateTime @default(now())
   
   @@index([id, senderId, recipientId])
+}
+model Conversation {
+  id Int @id @default(autoincrement())
+  content String? @db.Text
+  attachment String? @db.Text
+  attachment_type String?
+  participantId Int
+  participant User? @relation("ConversationParticipant", fields: [participantId], references: [id])
+  groupId Int
+  group Group? @relation("ConversationGroup", fields: [groupId], references: [id])
+  status ConversationStatus @default(AVAILABLE)
+  created_at DateTime @default(now())
+  
+  @@index([id, participantId, groupId])
 }
 
 enum ProfileStatus {
@@ -80,6 +120,12 @@ enum ProfileStatus {
 }
 
 enum ChatStatus {
+  AVAILABLE
+  UNAVAILABLE
+}
+
+enum ConversationStatus {
+  CLOSED
   AVAILABLE
   UNAVAILABLE
 }

@@ -46,7 +46,7 @@ module.exports = {
 
                 req.userData = user
 
-                next()
+                return next()
               }
             }
           )

@@ -24,6 +24,37 @@ module.exports = (socket) => {
                     }
                   }
                 }
+              },
+              recipients: {
+                include: {
+                  recipient: {
+                    include: {
+                      profile: true
+                    }
+                  }
+                }
+              },
+              groups: {
+                include: {
+                  members: {
+                    include: {
+                      user: {
+                        include: {
+                          profile: true
+                        }
+                      }
+                    }
+                  },
+                  conversations: {
+                    include: {
+                      participant: {
+                        include: {
+                          profile: true
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           })

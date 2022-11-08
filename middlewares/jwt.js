@@ -53,7 +53,7 @@ module.exports = {
 
                 socket.userData = user
 
-                next()
+                return next()
               }
             }
           )

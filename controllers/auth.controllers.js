@@ -78,7 +78,7 @@ module.exports = {
     main().finally(async () => {
       if (NODE_ENV === 'development') {
         console.log(
-          'Authentication Socket: Ends the Query Engine child process and closes all connections'
+          'Authentication Controller: Ends the Query Engine child process and closes all connections'
         )
       }
 
@@ -98,18 +98,6 @@ module.exports = {
         const findUser = await prisma.user.findUnique({
           where: {
             email: data.email
-          },
-          include: {
-            profile: true,
-            contacts: {
-              include: {
-                person: {
-                  include: {
-                    profile: true
-                  }
-                }
-              }
-            }
           }
         })
 
@@ -165,7 +153,7 @@ module.exports = {
     main().finally(async () => {
       if (NODE_ENV === 'development') {
         console.log(
-          'Authentication Socket: Ends the Query Engine child process and closes all connections'
+          'Authentication Controller: Ends the Query Engine child process and closes all connections'
         )
       }
 
@@ -209,7 +197,7 @@ module.exports = {
     main().finally(async () => {
       if (NODE_ENV === 'development') {
         console.log(
-          'Authentication Socket: Ends the Query Engine child process and closes all connections'
+          'Authentication Controller: Ends the Query Engine child process and closes all connections'
         )
       }
 
@@ -266,8 +254,9 @@ module.exports = {
         }
 
         const io = req.app.get('newSocketIo')
+        const socketId = req.app.get('socketId')
 
-        io.sockets.emit('auth:google', users)
+        io.in(socketId).emit('auth:google', users)
 
         res.send('<script>window.close();</script>')
       } catch (error) {
@@ -280,7 +269,7 @@ module.exports = {
     main().finally(async () => {
       if (NODE_ENV === 'development') {
         console.log(
-          'Authentication Socket: Ends the Query Engine child process and closes all connections'
+          'Authentication Controller: Ends the Query Engine child process and closes all connections'
         )
       }
 
