@@ -17,11 +17,7 @@ module.exports = (socket) => {
 
           const findContact = await prisma.profile.findFirst({
             where: {
-              user: {
-                profile: {
-                  username: contactUsername
-                }
-              }
+              username: contactUsername
             },
             include: {
               user: true
@@ -36,9 +32,9 @@ module.exports = (socket) => {
             'userId'
           ])
 
-          socket.emit('contact:read', { type: 'done', data: contact })
+          socket.emit('contact:find', { type: 'done', data: contact })
         } catch (error) {
-          socket.emit('contact:read', { type: 'err', message: error.message || 'Server error' })
+          socket.emit('contact:find', { type: 'err', message: error.message || 'Server error' })
         }
       }
 
@@ -49,18 +45,52 @@ module.exports = (socket) => {
           await prisma.$disconnect()
         })
     },
-    readContact: (contactId) => {
+    readContact: (contactUsername) => {
       const main = async () => {
         try {
-          if (!contactId) throw new createErrors.BadRequest('Contact ID required')
+          if (!contactUsername) throw new createErrors.BadRequest('Contact Username required')
 
           const user = socket.userData
-          const findContact = await prisma.contact.findUnique({
+          const findContact = await prisma.contact.findFirst({
             where: {
-              id: parseInt(contactId)
+              OR: [
+                {
+                  AND: [
+                    {
+                      person: {
+                        profile: {
+                          username: contactUsername
+                        }
+                      }
+                    },
+                    {
+                      userId: user?.id
+                    }
+                  ]
+                },
+                {
+                  AND: [
+                    {
+                      user: {
+                        profile: {
+                          username: contactUsername
+                        }
+                      }
+                    },
+                    {
+                      personId: user?.id
+                    }
+                  ]
+                }
+              ]
             },
             include: {
               person: {
+                include: {
+                  profile: true
+                }
+              },
+              user: {
                 include: {
                   profile: true
                 }
@@ -70,15 +100,9 @@ module.exports = (socket) => {
 
           if (!findContact) throw new createErrors.BadRequest('Failed to get contact')
 
-          if (findContact.userId !== user.id) throw new createErrors.BadRequest('Access denied, you have no access to this contact')
+          console.log('contactnya', findContact)
 
-          const contact = exclude(findContact, [
-            'password',
-            'personId',
-            'userId'
-          ])
-
-          socket.emit('contact:read', { type: 'done', data: contact })
+          socket.emit('contact:read', { type: 'done', data: findContact })
         } catch (error) {
           socket.emit('contact:read', { type: 'err', message: error.message || 'Server error' })
         }
@@ -99,7 +123,14 @@ module.exports = (socket) => {
           const user = socket.userData
           const findContact = await prisma.contact.findFirst({
             where: {
-              personId: parseInt(contactId)
+              AND: [
+                {
+                  personId: parseInt(contactId)
+                },
+                {
+                  userId: user.id
+                }
+              ]
             },
             include: {
               person: {
@@ -180,16 +211,59 @@ module.exports = (socket) => {
                 include: {
                   profile: true
                 }
+              },
+              user: {
+                include: {
+                  profile: true
+                }
               }
+            }
+          })
+
+          await prisma.chat.deleteMany({
+            where: {
+              OR: [
+                {
+                  AND: [
+                    {
+                      recipient: {
+                        profile: {
+                          username: deleteContact.person.profile.username
+                        }
+                      }
+                    },
+                    {
+                      senderId: user?.id
+                    }
+                  ]
+                },
+                {
+                  AND: [
+                    {
+                      sender: {
+                        profile: {
+                          username: deleteContact.person.profile.username
+                        }
+                      }
+                    },
+                    {
+                      recipientId: user?.id
+                    }
+                  ]
+                }
+              ]
             }
           })
 
           if (!deleteContact) throw new createErrors.Conflict('Failed to remove contact')
 
+          socket.broadcast
+            .to(
+              deleteContact?.personId === user?.id ? deleteContact?.user?.session_id : deleteContact?.person?.session_id
+            )
+            .emit('contact:delete', { type: 'info' })
+
           socket.emit('contact:delete', { type: 'info', message: 'Success to remove contact' })
-          socket
-            .to([user.session_id, deleteContact.person.session_id])
-            .emit('profile:read')
         } catch (error) {
           socket.emit('contact:delete', { type: 'err', message: error.message || 'Server error' })
         }

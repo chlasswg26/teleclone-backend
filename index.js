@@ -170,6 +170,10 @@ io.on('connection', (socket) => {
   contactHandlers(socket)
   chatHandlers(socket)
   onlineOfflineHandlers(socket)
+
+  socket.on('join:room', (room) => {
+    socket.join(room)
+  })
 })
 
 httpServer.listen(PORT, () => {

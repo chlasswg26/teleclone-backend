@@ -1,8 +1,8 @@
 const prisma = require('../config/prisma')
-const exclude = require('../helpers/excluder')
 require('dotenv').config()
 const { NODE_ENV } = process.env
 const createErrors = require('http-errors')
+const argon2 = require('argon2')
 
 module.exports = (socket) => {
   return {
@@ -26,8 +26,33 @@ module.exports = (socket) => {
                 }
               },
               recipients: {
+                orderBy: {
+                  id: 'desc'
+                },
                 include: {
                   recipient: {
+                    include: {
+                      profile: true
+                    }
+                  },
+                  sender: {
+                    include: {
+                      profile: true
+                    }
+                  }
+                }
+              },
+              senders: {
+                orderBy: {
+                  id: 'desc'
+                },
+                include: {
+                  recipient: {
+                    include: {
+                      profile: true
+                    }
+                  },
+                  sender: {
                     include: {
                       profile: true
                     }
@@ -61,14 +86,10 @@ module.exports = (socket) => {
 
           if (!findProfile) throw new createErrors.BadRequest('Failed to get profile')
 
-          const profile = exclude(findProfile, [
-            'password',
-            'personId',
-            'userId',
-            'adminId'
-          ])
-
-          socket.emit('profile:read', { type: 'done', data: profile })
+          socket.emit('profile:read', {
+            type: 'done',
+            data: findProfile
+          })
         } catch (error) {
           socket.emit('profile:read', { type: 'err', message: error.message || 'Server error' })
         }
@@ -85,6 +106,20 @@ module.exports = (socket) => {
       const main = async () => {
         try {
           if (!data) throw new createErrors.BadRequest('Profile data required')
+
+          if (data?.password) {
+            const hashPassword = await argon2.hash(data.password, {
+              type: argon2.argon2id
+            })
+
+            data.user = {
+              update: {
+                password: hashPassword
+              }
+            }
+
+            delete data.password
+          }
 
           const user = socket.userData
           const updateUser = await prisma.profile.update({

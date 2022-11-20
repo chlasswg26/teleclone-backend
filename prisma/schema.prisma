@@ -26,8 +26,8 @@ model User {
   profile Profile?
   contacts Contact[] @relation("ContactUser")
   contact Contact[] @relation("ContactPerson")
-  sender Chat[] @relation("ChatSender")
   recipients Chat[] @relation("ChatRecipient")
+  senders Chat[] @relation("ChatSender")
   groups Group[] @relation("GroupOwner")
   participant Conversation[] @relation("ConversationParticipant")
   member Members[] @relation("GroupUser")
@@ -89,10 +89,10 @@ model Chat {
   content String? @db.Text
   attachment String? @db.Text
   attachment_type String?
-  senderId Int
-  sender User? @relation("ChatSender", fields: [senderId], references: [id])
   recipientId Int
+  senderId Int
   recipient User? @relation("ChatRecipient", fields: [recipientId], references: [id])
+  sender User? @relation("ChatSender", fields: [senderId], references: [id])
   status ChatStatus @default(AVAILABLE)
   created_at DateTime @default(now())
   

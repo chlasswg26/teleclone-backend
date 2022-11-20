@@ -1,21 +1,52 @@
 const prisma = require('../config/prisma')
-const exclude = require('../helpers/excluder')
 require('dotenv').config()
 const { NODE_ENV } = process.env
 const createErrors = require('http-errors')
 
 module.exports = (socket) => {
   return {
-    readChat: (contactId) => {
+    readChat: (contactUsername) => {
       const user = socket.userData
 
       const main = async () => {
         try {
-          if (!contactId) throw new createErrors.BadRequest('Contact ID required')
+          if (!contactUsername) throw new createErrors.BadRequest('Contact Username required')
 
           const findChat = await prisma.chat.findMany({
             where: {
-              recipientId: parseInt(contactId)
+              OR: [
+                {
+                  AND: [
+                    {
+                      recipient: {
+                        profile: {
+                          username: contactUsername
+                        }
+                      }
+                    },
+                    {
+                      senderId: user.id
+                    }
+                  ]
+                },
+                {
+                  AND: [
+                    {
+                      sender: {
+                        profile: {
+                          username: contactUsername
+                        }
+                      }
+                    },
+                    {
+                      recipientId: user.id
+                    }
+                  ]
+                }
+              ]
+            },
+            orderBy: {
+              id: 'asc'
             },
             include: {
               sender: {
@@ -33,13 +64,10 @@ module.exports = (socket) => {
 
           if (!findChat) throw new createErrors.BadRequest('Failed to get chat')
 
-          if (findChat.senderId !== user.id) throw new createErrors.BadRequest('Access denied, you have no access to this chat')
-
-          const chat = exclude(findChat, [
-            'password'
-          ])
-
-          socket.emit('chat:read', { type: 'done', data: chat })
+          socket.emit('chat:read', {
+            type: 'done',
+            data: findChat
+          })
         } catch (error) {
           socket.emit('chat:read', {
             type: 'err',
@@ -63,9 +91,7 @@ module.exports = (socket) => {
           const user = socket.userData
           const findUser = await prisma.user.findFirst({
             where: {
-              profile: {
-                id: parseInt(data?.id)
-              }
+              id: parseInt(data?.id)
             },
             include: {
               profile: true
@@ -83,23 +109,28 @@ module.exports = (socket) => {
               content: data?.content,
               attachment: data?.attachment,
               attachment_type: data?.attachment_type
+            },
+            include: {
+              sender: {
+                include: {
+                  profile: true
+                }
+              },
+              recipient: {
+                include: {
+                  profile: true
+                }
+              }
             }
           })
 
           if (!createChat) throw new createErrors.Conflict('Failed to send chat')
 
-          const message = {}
+          socket.broadcast
+            .to(createChat.recipient.session_id)
+            .emit('chat:send', { type: 'done', data: createChat })
 
-          if (data?.content) message.content = data?.content
-
-          if (data?.attachment) {
-            message.attachment = data?.attachment
-            message.attachment_type = data?.attachment_type
-          }
-
-          socket
-            .to(data?.socketId)
-            .emit('chat:send', { type: 'done', data: message })
+          socket.emit('chat:send', { type: 'done', data: createChat })
         } catch (error) {
           socket.emit('chat:send', {
             type: 'err',
